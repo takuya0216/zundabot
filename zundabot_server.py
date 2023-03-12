@@ -9,7 +9,6 @@ from zundabot import Zundabot
 load_dotenv("./.env")
 slack_token = os.environ.get("SLACK_AUTH_TOKEN")
 slack_app_token = os.environ.get("SLACK_APP_TOKEN")
-slack_channel_id = os.environ.get("SLACK_APP_CHANNEL_ID")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 
 chatbot = Zundabot(openai_api_key)
