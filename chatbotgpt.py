@@ -1,25 +1,57 @@
 import openai
-from dotenv import load_dotenv
 
 class ChatBotGPT(object):
-    def __init__(self, apikey=None):
-        self.apikey = apikey
+    #How many contexs are remenbered.
+    MAXMEMORY = 10
 
-    def ask(self, question=None):
+    def __init__(self, apikey=None, sys_conf=None):
+        self.apikey = apikey
+        self.system = []
+        for sys in sys_conf:
+            self.system.append({"role": "system", "content": sys})
+        self.assistant = {}
+        self.user = {}
+
+    def clear_memory(self, userid):
+        self.assistant[userid].clear()
+        self.user[userid].clear()
+
+    def ask(self, question=None, userid=None):
         openai.api_key = self.apikey
 
         if type(question) is not str:
-            return "不正な入力なのだ。"
+            return "invalid value error."
 
         try:
+            querys=[]
+            #system
+            for sys in self.system:
+                querys.append(sys)
+            #context
+            self.user.setdefault(userid, [])
+            self.assistant.setdefault(userid, [])
+            for user, ass in zip(self.user[userid], self.assistant[userid]):
+                querys.append(user)
+                querys.append(ass)
+            #question
+            user_query = {"role": "user", "content": question}
+            querys.append(user_query)
+
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "全ての文章の語尾に「なのだ」と付けて返事をしてください。"},
-                    {"role": "system", "content": "必要な場合には、返事の最初に挨拶など気の利いた一言添えてから回答してください。文脈的におかしい場合は不要です。"},
-                    {"role": "user", "content": question},
-                ]
+                messages=querys,
             )
-            return response["choices"][0]["message"]["content"]
+
+            response_message = response["choices"][0]["message"]["content"]
+            assistant_query = {"role": "assistant", "content": response_message}
+
+            if((len(self.user[userid]) > self.MAXMEMORY) and
+               (len(self.assistant[userid]) > self.MAXMEMORY)):
+                self.clear_memory(userid)
+
+            self.user[userid].append(user_query)
+            self.assistant[userid].append(assistant_query)
+
+            return response_message
         except:
             return "error"
